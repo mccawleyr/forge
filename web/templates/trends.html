@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}TRENDS // FORGE{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-2xl font-bold terminal-text">> TRENDS</h1>
+    <div class="flex gap-2">
+        <a href="?days=7" class="terminal-btn px-3 py-1 text-sm {% if days == 7 %}bg-green-900{% endif %}">7D</a>
+        <a href="?days=30" class="terminal-btn px-3 py-1 text-sm {% if days == 30 %}bg-green-900{% endif %}">30D</a>
+        <a href="?days=90" class="terminal-btn px-3 py-1 text-sm {% if days == 90 %}bg-green-900{% endif %}">90D</a>
+    </div>
+</div>
+
+<!-- Weight Trend -->
+<div class="terminal-box p-4 mb-6">
+    <h3 class="text-sm text-green-700 mb-4">> WEIGHT_TREND</h3>
+    {% if weight_history %}
+    <canvas id="weightChart" height="80"></canvas>
+
+    <div class="grid grid-cols-3 gap-4 mt-6 text-center">
+        <div>
+            <div class="text-xl font-bold terminal-text">{{ weight_history[0].weight_lbs if weight_history else '-' }}</div>
+            <div class="text-xs text-green-700">START</div>
+        </div>
+        <div>
+            <div class="text-xl font-bold terminal-text">{{ weight_history[-1].weight_lbs if weight_history else '-' }}</div>
+            <div class="text-xs text-green-700">CURRENT</div>
+        </div>
+        <div>
+            {% set change = (weight_history[-1].weight_lbs - weight_history[0].weight_lbs) | round(1) if weight_history | length > 1 else 0 %}
+            <div class="text-xl font-bold {% if change < 0 %}text-green-400{% elif change > 0 %}text-red-400{% endif %}">
+                {% if change > 0 %}+{% endif %}{{ change }}
+            </div>
+            <div class="text-xs text-green-700">DELTA</div>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-green-700 text-sm">No weight data. Log weight to see trends.</p>
+    {% endif %}
+</div>
+
+<!-- Nutrition Trend -->
+<div class="terminal-box p-4 mb-6">
+    <h3 class="text-sm text-green-700 mb-4">> WEEKLY_NUTRITION</h3>
+    <canvas id="nutritionChart" height="80"></canvas>
+</div>
+
+<!-- Stats Summary -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {% set total_calories = week | sum(attribute='calories') %}
+    {% set avg_calories = (total_calories / (week | length)) | round(0) if week else 0 %}
+    <div class="terminal-box p-4 text-center">
+        <div class="text-xl font-bold terminal-text">{{ avg_calories | int }}</div>
+        <div class="text-xs text-green-700">AVG CAL/DAY</div>
+    </div>
+
+    {% set total_protein = week | sum(attribute='protein_g') %}
+    {% set avg_protein = (total_protein / (week | length)) | round(0) if week else 0 %}
+    <div class="terminal-box p-4 text-center">
+        <div class="text-xl font-bold terminal-text">{{ avg_protein | int }}g</div>
+        <div class="text-xs text-green-700">AVG PROTEIN/DAY</div>
+    </div>
+
+    {% set total_water = week | sum(attribute='water_oz') %}
+    {% set avg_water = (total_water / (week | length)) | round(0) if week else 0 %}
+    <div class="terminal-box p-4 text-center">
+        <div class="text-xl font-bold terminal-text">{{ avg_water | int }}oz</div>
+        <div class="text-xs text-green-700">AVG WATER/DAY</div>
+    </div>
+
+    {% set workout_days = week | selectattr('workout_minutes', 'gt', 0) | list | length %}
+    <div class="terminal-box p-4 text-center">
+        <div class="text-xl font-bold terminal-text">{{ workout_days }}</div>
+        <div class="text-xs text-green-700">WORKOUT DAYS</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if weight_history %}
+const weightCtx = document.getElementById('weightChart').getContext('2d');
+new Chart(weightCtx, {
+    type: 'line',
+    data: {
+        labels: {{ weight_history | map(attribute='date') | list | tojson }},
+        datasets: [{
+            label: 'Weight (lbs)',
+            data: {{ weight_history | map(attribute='weight_lbs') | list | tojson }},
+            borderColor: '#00ff00',
+            backgroundColor: 'rgba(0, 255, 0, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: '#00ff00',
+            pointBorderColor: '#00ff00'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { grid: { color: '#004400' }, ticks: { color: '#00aa00' } },
+            x: { grid: { color: '#004400' }, ticks: { color: '#00aa00' } }
+        }
+    }
+});
+{% endif %}
+
+const nutritionCtx = document.getElementById('nutritionChart').getContext('2d');
+new Chart(nutritionCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ week | map(attribute='date') | list | reverse | list | tojson }},
+        datasets: [
+            {
+                label: 'Calories',
+                data: {{ week | map(attribute='calories') | list | reverse | list | tojson }},
+                backgroundColor: '#00aa00',
+                yAxisID: 'y'
+            },
+            {
+                label: 'Protein (g)',
+                data: {{ week | map(attribute='protein_g') | list | reverse | list | tojson }},
+                backgroundColor: '#00ff00',
+                yAxisID: 'y1'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: '#00aa00' } }
+        },
+        scales: {
+            y: {
+                type: 'linear',
+                position: 'left',
+                grid: { color: '#004400' },
+                ticks: { color: '#00aa00' },
+                title: { display: true, text: 'Calories', color: '#00aa00' }
+            },
+            y1: {
+                type: 'linear',
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                ticks: { color: '#00aa00' },
+                title: { display: true, text: 'Protein (g)', color: '#00aa00' }
+            },
+            x: { grid: { color: '#004400' }, ticks: { color: '#00aa00' } }
+        }
+    }
+});
+</script>
+{% endblock %}

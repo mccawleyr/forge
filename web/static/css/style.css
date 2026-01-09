@@ -1,0 +1,29 @@
+/* Custom styles for Forge dashboard */
+
+/* Smooth transitions */
+* {
+    transition-property: background-color, border-color, color;
+    transition-duration: 150ms;
+}
+
+/* Form inputs focus state */
+input:focus, select:focus {
+    outline: none;
+    border-color: #f97316;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+}
+
+/* Progress bar animation */
+.progress-bar {
+    transition: width 0.5s ease-in-out;
+}
+
+/* Table hover effect */
+tbody tr:hover {
+    background-color: rgba(249, 115, 22, 0.1);
+}
+
+/* Responsive chart containers */
+canvas {
+    max-width: 100%;
+}

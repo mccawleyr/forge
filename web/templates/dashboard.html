@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}DASHBOARD // FORGE{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold terminal-text">> TODAY'S_PROGRESS</h1>
+    <p class="text-green-700 text-sm">// {{ today.date }}</p>
+</div>
+
+<!-- Progress Cards -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+    <!-- Calories -->
+    <div class="terminal-box p-3">
+        <h3 class="text-xs text-green-700 mb-1">CALORIES</h3>
+        <div class="text-xl font-bold terminal-text">{{ today.calories }}</div>
+        <div class="text-xs text-green-700">/ {{ today.calorie_goal }}</div>
+        <div class="progress-bar mt-2">
+            <div class="progress-fill" style="width: {{ [today.calorie_pct, 100] | min }}%"></div>
+        </div>
+    </div>
+
+    <!-- Protein -->
+    <div class="terminal-box p-3">
+        <h3 class="text-xs text-green-700 mb-1">PROTEIN</h3>
+        <div class="text-xl font-bold terminal-text">{{ today.protein_g | round(0) }}g</div>
+        <div class="text-xs text-green-700">/ {{ today.protein_goal }}g</div>
+        <div class="progress-bar mt-2">
+            <div class="progress-fill" style="width: {{ [today.protein_pct, 100] | min }}%"></div>
+        </div>
+    </div>
+
+    <!-- Water -->
+    <div class="terminal-box p-3">
+        <h3 class="text-xs text-green-700 mb-1">WATER</h3>
+        <div class="text-xl font-bold terminal-text">{{ today.water_oz | round(0) }}oz</div>
+        <div class="text-xs text-green-700">/ {{ today.water_goal }}oz</div>
+        <div class="progress-bar mt-2">
+            <div class="progress-fill" style="width: {{ [today.water_pct, 100] | min }}%"></div>
+        </div>
+    </div>
+
+    <!-- Fiber -->
+    <div class="terminal-box p-3">
+        <h3 class="text-xs text-green-700 mb-1">FIBER</h3>
+        <div class="text-xl font-bold terminal-text">{{ today.fiber_g | round(0) }}g</div>
+        <div class="text-xs text-green-700">/ 25g</div>
+        <div class="progress-bar mt-2">
+            <div class="progress-fill" style="width: {{ [(today.fiber_g / 25 * 100), 100] | min }}%"></div>
+        </div>
+    </div>
+
+    <!-- Fasting Timer -->
+    <div class="terminal-box p-3">
+        <h3 class="text-xs text-green-700 mb-1">FASTING</h3>
+        <div class="text-xl font-bold terminal-text" id="fasting-display">--:--</div>
+        <div class="text-xs text-green-700" id="fasting-status">NOT SET</div>
+        <button onclick="openFastingModal()" class="terminal-btn text-xs px-2 py-1 mt-2 w-full">SET</button>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    {% if today.weight %}
+    <div class="terminal-box p-3 text-center">
+        <div class="text-lg font-bold terminal-text">{{ today.weight }}</div>
+        <div class="text-xs text-green-700">LBS</div>
+    </div>
+    {% endif %}
+
+    <div class="terminal-box p-3 text-center">
+        <div class="text-lg font-bold terminal-text">{{ today.carbs_g | round(0) }}g</div>
+        <div class="text-xs text-green-700">CARBS</div>
+    </div>
+
+    <div class="terminal-box p-3 text-center">
+        <div class="text-lg font-bold terminal-text">{{ today.fat_g | round(0) }}g</div>
+        <div class="text-xs text-green-700">FAT</div>
+    </div>
+
+    {% if today.workout_minutes %}
+    <div class="terminal-box p-3 text-center">
+        <div class="text-lg font-bold terminal-text">{{ today.workout_minutes }}</div>
+        <div class="text-xs text-green-700">WORKOUT MIN</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Log Forms Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Log Food -->
+    <div class="terminal-box p-4">
+        <h3 class="text-sm text-green-700 mb-3">> LOG_FOOD</h3>
+        <form method="POST" action="/log" class="space-y-2" id="food-form">
+            <input type="hidden" name="type" value="nutrition">
+            <div class="flex gap-2">
+                <input type="text" name="description" id="food-search" required
+                    class="terminal-input flex-1 px-2 py-1 text-sm" placeholder="search..." autocomplete="off">
+                <button type="button" id="search-btn" class="terminal-btn px-2 py-1 text-xs">FIND</button>
+            </div>
+            <div id="search-results" class="hidden terminal-box max-h-32 overflow-y-auto text-xs"></div>
+            <div class="grid grid-cols-3 gap-1">
+                <input type="number" step="0.1" name="quantity" id="quantity" value="1" min="0.1"
+                    class="terminal-input px-2 py-1 text-xs" placeholder="qty">
+                <input type="number" name="calories" id="calories" class="terminal-input px-2 py-1 text-xs" placeholder="cal">
+                <input type="number" step="0.1" name="protein" id="protein" class="terminal-input px-2 py-1 text-xs" placeholder="prot">
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+                <input type="number" step="0.1" name="carbs" id="carbs" class="terminal-input px-2 py-1 text-xs" placeholder="carbs">
+                <input type="number" step="0.1" name="fat" id="fat" class="terminal-input px-2 py-1 text-xs" placeholder="fat">
+                <input type="number" step="0.1" name="fiber" id="fiber" class="terminal-input px-2 py-1 text-xs" placeholder="fiber">
+            </div>
+            <select name="meal_type" class="terminal-input w-full px-2 py-1 text-xs">
+                <option value="">-- MEAL --</option>
+                <option value="breakfast">BREAKFAST</option>
+                <option value="lunch">LUNCH</option>
+                <option value="dinner">DINNER</option>
+                <option value="snack">SNACK</option>
+            </select>
+            <button type="submit" class="terminal-btn w-full py-1 text-xs">[LOG]</button>
+        </form>
+    </div>
+
+    <!-- Log Water -->
+    <div class="terminal-box p-4">
+        <h3 class="text-sm text-green-700 mb-3">> LOG_WATER</h3>
+        <form method="POST" action="/log" class="space-y-2">
+            <input type="hidden" name="type" value="water">
+            <input type="number" step="0.1" name="water_oz" required
+                class="terminal-input w-full px-2 py-1 text-sm" placeholder="oz">
+            <div class="grid grid-cols-4 gap-1">
+                <button type="button" onclick="setWater(8)" class="terminal-btn text-xs py-1">8</button>
+                <button type="button" onclick="setWater(12)" class="terminal-btn text-xs py-1">12</button>
+                <button type="button" onclick="setWater(16)" class="terminal-btn text-xs py-1">16</button>
+                <button type="button" onclick="setWater(24)" class="terminal-btn text-xs py-1">24</button>
+            </div>
+            <button type="submit" class="terminal-btn w-full py-1 text-xs">[LOG]</button>
+        </form>
+    </div>
+
+    <!-- Log Weight -->
+    <div class="terminal-box p-4">
+        <h3 class="text-sm text-green-700 mb-3">> LOG_WEIGHT</h3>
+        <form method="POST" action="/log" class="space-y-2">
+            <input type="hidden" name="type" value="weight">
+            <input type="number" step="0.1" name="weight" required
+                class="terminal-input w-full px-2 py-1 text-sm" placeholder="lbs">
+            <button type="submit" class="terminal-btn w-full py-1 text-xs">[LOG]</button>
+        </form>
+    </div>
+
+    <!-- Log Workout -->
+    <div class="terminal-box p-4">
+        <h3 class="text-sm text-green-700 mb-3">> LOG_WORKOUT</h3>
+        <form method="POST" action="/log" class="space-y-2">
+            <input type="hidden" name="type" value="workout">
+            <select name="workout_type" class="terminal-input w-full px-2 py-1 text-xs">
+                <option value="cardio">CARDIO</option>
+                <option value="strength">STRENGTH</option>
+                <option value="walking">WALKING</option>
+                <option value="other">OTHER</option>
+            </select>
+            <div class="grid grid-cols-2 gap-1">
+                <input type="number" name="duration" class="terminal-input px-2 py-1 text-xs" placeholder="mins">
+                <input type="number" name="calories_burned" class="terminal-input px-2 py-1 text-xs" placeholder="cal burn">
+            </div>
+            <input type="text" name="workout_description" class="terminal-input w-full px-2 py-1 text-xs" placeholder="notes...">
+            <button type="submit" class="terminal-btn w-full py-1 text-xs">[LOG]</button>
+        </form>
+    </div>
+</div>
+
+<!-- Week Summary -->
+<div class="terminal-box p-4">
+    <h3 class="text-sm mb-4 text-green-700">> THIS_WEEK</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-green-700 border-b border-green-900">
+                    <th class="text-left py-2">DATE</th>
+                    <th class="text-right py-2">CAL</th>
+                    <th class="text-right py-2">PROT</th>
+                    <th class="text-right py-2">FIBER</th>
+                    <th class="text-right py-2">WATER</th>
+                    <th class="text-right py-2">WT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in week %}
+                <tr class="border-b border-green-900/50">
+                    <td class="py-2">{{ day.date }}</td>
+                    <td class="text-right py-2 {% if day.calorie_pct > 100 %}text-red-400{% endif %}">{{ day.calories }}</td>
+                    <td class="text-right py-2">{{ day.protein_g | round(0) }}g</td>
+                    <td class="text-right py-2">{{ day.fiber_g | round(0) }}g</td>
+                    <td class="text-right py-2">{{ day.water_oz | round(0) }}oz</td>
+                    <td class="text-right py-2">{% if day.weight %}{{ day.weight }}{% else %}-{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Fasting Modal -->
+<div id="fasting-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div class="terminal-box p-6 w-80">
+        <h3 class="text-sm text-green-700 mb-4">> SET_FASTING_TIMER</h3>
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs text-green-700">LAST MEAL TIME</label>
+                <input type="time" id="last-meal-time" class="terminal-input w-full px-2 py-1 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-green-700">FAST DURATION (HOURS)</label>
+                <div class="grid grid-cols-4 gap-1 mt-1">
+                    <button type="button" onclick="setFastDuration(12)" class="terminal-btn text-xs py-1">12</button>
+                    <button type="button" onclick="setFastDuration(14)" class="terminal-btn text-xs py-1">14</button>
+                    <button type="button" onclick="setFastDuration(16)" class="terminal-btn text-xs py-1">16</button>
+                    <button type="button" onclick="setFastDuration(18)" class="terminal-btn text-xs py-1">18</button>
+                </div>
+                <input type="number" id="fast-duration" value="16" class="terminal-input w-full px-2 py-1 text-sm mt-1">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="startFasting()" class="terminal-btn flex-1 py-2 text-sm">[START]</button>
+                <button onclick="closeFastingModal()" class="terminal-btn flex-1 py-2 text-sm">[CANCEL]</button>
+            </div>
+            <button onclick="clearFasting()" class="terminal-btn w-full py-1 text-xs text-red-400">[CLEAR TIMER]</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// USDA Search
+const searchInput = document.getElementById('food-search');
+const searchBtn = document.getElementById('search-btn');
+const searchResults = document.getElementById('search-results');
+const quantityInput = document.getElementById('quantity');
+let searchTimeout = null;
+let baseNutrients = {};
+
+function setWater(oz) {
+    document.querySelector('input[name="water_oz"]').value = oz;
+}
+
+async function searchUSDA(query) {
+    if (!query || query.length < 2) { searchResults.classList.add('hidden'); return; }
+    searchBtn.textContent = '...';
+    try {
+        const response = await fetch(`/api/nutrition/usda/search?query=${encodeURIComponent(query)}&limit=6`);
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+            searchResults.innerHTML = data.results.map(food => `
+                <div class="p-2 hover:bg-green-900/30 cursor-pointer border-b border-green-900/50"
+                     onclick='selectFood(${JSON.stringify(food).replace(/'/g, "&#39;")})'>
+                    <div class="terminal-text">${food.description}</div>
+                    <div class="text-green-600">${food.calories || 0}cal ${food.protein_g || 0}P</div>
+                </div>
+            `).join('');
+            searchResults.classList.remove('hidden');
+        } else {
+            searchResults.innerHTML = '<div class="p-2 text-green-700">NO RESULTS</div>';
+            searchResults.classList.remove('hidden');
+        }
+    } catch (err) {
+        searchResults.innerHTML = '<div class="p-2 text-red-400">ERROR</div>';
+        searchResults.classList.remove('hidden');
+    }
+    searchBtn.textContent = 'FIND';
+}
+
+function selectFood(food) {
+    baseNutrients = { calories: food.calories || 0, protein: food.protein_g || 0, carbs: food.carbs_g || 0, fat: food.fat_g || 0, fiber: food.fiber_g || 0 };
+    document.getElementById('food-search').value = food.description;
+    quantityInput.value = 1;
+    updateNutrients();
+    searchResults.classList.add('hidden');
+}
+
+function updateNutrients() {
+    const qty = parseFloat(quantityInput.value) || 1;
+    document.getElementById('calories').value = Math.round(baseNutrients.calories * qty) || '';
+    document.getElementById('protein').value = Math.round(baseNutrients.protein * qty * 10) / 10 || '';
+    document.getElementById('carbs').value = Math.round(baseNutrients.carbs * qty * 10) / 10 || '';
+    document.getElementById('fat').value = Math.round(baseNutrients.fat * qty * 10) / 10 || '';
+    document.getElementById('fiber').value = Math.round(baseNutrients.fiber * qty * 10) / 10 || '';
+}
+
+quantityInput?.addEventListener('input', updateNutrients);
+searchBtn?.addEventListener('click', () => searchUSDA(searchInput.value));
+searchInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); searchUSDA(searchInput.value); } });
+searchInput?.addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { if (searchInput.value.length >= 3) searchUSDA(searchInput.value); }, 500); });
+document.addEventListener('click', (e) => { if (!searchResults?.contains(e.target) && e.target !== searchInput && e.target !== searchBtn) searchResults?.classList.add('hidden'); });
+
+// Fasting Timer
+function openFastingModal() {
+    document.getElementById('fasting-modal').classList.remove('hidden');
+    const now = new Date();
+    document.getElementById('last-meal-time').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+
+function closeFastingModal() {
+    document.getElementById('fasting-modal').classList.add('hidden');
+}
+
+function setFastDuration(hours) {
+    document.getElementById('fast-duration').value = hours;
+}
+
+function startFasting() {
+    const timeStr = document.getElementById('last-meal-time').value;
+    const duration = parseInt(document.getElementById('fast-duration').value);
+    if (!timeStr || !duration) return;
+
+    const [hours, mins] = timeStr.split(':').map(Number);
+    const lastMeal = new Date();
+    lastMeal.setHours(hours, mins, 0, 0);
+
+    // If time is in the future, assume it was yesterday
+    if (lastMeal > new Date()) {
+        lastMeal.setDate(lastMeal.getDate() - 1);
+    }
+
+    const fastEnd = new Date(lastMeal.getTime() + duration * 60 * 60 * 1000);
+
+    localStorage.setItem('fastingEnd', fastEnd.toISOString());
+    localStorage.setItem('fastingDuration', duration);
+    closeFastingModal();
+    updateFastingDisplay();
+}
+
+function clearFasting() {
+    localStorage.removeItem('fastingEnd');
+    localStorage.removeItem('fastingDuration');
+    document.getElementById('fasting-display').textContent = '--:--';
+    document.getElementById('fasting-status').textContent = 'NOT SET';
+    closeFastingModal();
+}
+
+function updateFastingDisplay() {
+    const fastEndStr = localStorage.getItem('fastingEnd');
+    if (!fastEndStr) return;
+
+    const fastEnd = new Date(fastEndStr);
+    const now = new Date();
+    const diff = fastEnd - now;
+
+    const display = document.getElementById('fasting-display');
+    const status = document.getElementById('fasting-status');
+
+    if (diff <= 0) {
+        display.textContent = '00:00';
+        display.classList.add('text-green-400');
+        status.textContent = 'COMPLETE!';
+        status.classList.add('text-green-400');
+    } else {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        display.textContent = `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+        display.classList.remove('text-green-400');
+        status.textContent = `UNTIL ${fastEnd.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})}`;
+        status.classList.remove('text-green-400');
+    }
+}
+
+// Update fasting timer every minute
+updateFastingDisplay();
+setInterval(updateFastingDisplay, 60000);
+</script>
+{% endblock %}

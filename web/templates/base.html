@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FORGE{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --terminal-green: #00ff00;
+            --terminal-green-dim: #00aa00;
+            --terminal-green-dark: #004400;
+            --terminal-bg: #0a0a0a;
+            --terminal-bg-light: #111111;
+        }
+
+        * {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--terminal-bg);
+            color: var(--terminal-green);
+        }
+
+        .terminal-text {
+            text-shadow: 0 0 5px var(--terminal-green-dim);
+        }
+
+        .terminal-box {
+            background-color: var(--terminal-bg-light);
+            border: 1px solid var(--terminal-green-dark);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.1);
+        }
+
+        .terminal-input {
+            background-color: var(--terminal-bg) !important;
+            border: 1px solid var(--terminal-green-dark) !important;
+            color: var(--terminal-green) !important;
+        }
+
+        .terminal-input:focus {
+            border-color: var(--terminal-green) !important;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3) !important;
+            outline: none !important;
+        }
+
+        .terminal-input::placeholder {
+            color: var(--terminal-green-dark);
+        }
+
+        .terminal-btn {
+            background-color: var(--terminal-green-dark);
+            color: var(--terminal-green);
+            border: 1px solid var(--terminal-green);
+            transition: all 0.2s;
+        }
+
+        .terminal-btn:hover {
+            background-color: var(--terminal-green);
+            color: var(--terminal-bg);
+            box-shadow: 0 0 10px var(--terminal-green);
+        }
+
+        .progress-bar {
+            background-color: var(--terminal-green-dark);
+            height: 8px;
+            border: 1px solid var(--terminal-green-dark);
+        }
+
+        .progress-fill {
+            background-color: var(--terminal-green);
+            height: 100%;
+            box-shadow: 0 0 5px var(--terminal-green);
+            transition: width 0.3s;
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            z-index: 1000;
+        }
+
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        select {
+            background-color: var(--terminal-bg) !important;
+            border: 1px solid var(--terminal-green-dark) !important;
+            color: var(--terminal-green) !important;
+        }
+
+        select option {
+            background-color: var(--terminal-bg);
+            color: var(--terminal-green);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="scanline"></div>
+
+    <nav class="terminal-box border-t-0 border-l-0 border-r-0">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-14">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold terminal-text tracking-wider">[FORGE]</span>
+                    <span class="blink ml-1">_</span>
+                    <div class="ml-10 flex items-baseline space-x-2">
+                        <a href="/" class="px-3 py-2 text-sm hover:bg-green-900/30 {% if request.path == '/' %}bg-green-900/50 border border-green-800{% endif %}">> DASHBOARD</a>
+                        <a href="/log" class="px-3 py-2 text-sm hover:bg-green-900/30 {% if request.path == '/log' %}bg-green-900/50 border border-green-800{% endif %}">> HISTORY</a>
+                        <a href="/trends" class="px-3 py-2 text-sm hover:bg-green-900/30 {% if request.path == '/trends' %}bg-green-900/50 border border-green-800{% endif %}">> TRENDS</a>
+                    </div>
+                </div>
+                <div class="text-xs text-green-700">v1.0.0</div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 relative z-10">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
