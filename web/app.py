@@ -163,6 +163,19 @@ def chart_nutrition_data():
     })
 
 
+@app.route("/api/nutrition/<int:log_id>", methods=["DELETE"])
+def delete_nutrition_log(log_id: int):
+    """Delete a nutrition log entry"""
+    with httpx.Client() as client:
+        response = client.delete(
+            f"{API_URL}/api/nutrition/{log_id}",
+            params={"discord_id": DEFAULT_DISCORD_ID}
+        )
+        if response.status_code == 200:
+            return jsonify(response.json())
+        return jsonify({"error": "Failed to delete"}), response.status_code
+
+
 @app.route("/api/nutrition/usda/search")
 def usda_search():
     """Proxy USDA search requests to the API"""

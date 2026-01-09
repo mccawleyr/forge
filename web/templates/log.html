@@ -28,7 +28,7 @@
             {% set day_totals.fiber = day_totals.fiber + (log.fiber_g or 0) %}
             {% set day_totals.water = day_totals.water + (log.water_oz or 0) %}
 
-            <div class="flex justify-between items-center py-1 border-b border-green-900/30 text-sm">
+            <div class="flex justify-between items-center py-1 border-b border-green-900/30 text-sm group">
                 <div class="flex items-center gap-3">
                     <span class="text-green-700 text-xs">{{ log.logged_at[11:16] if log.logged_at else '' }}</span>
                     <span class="terminal-text">{{ log.description }}</span>
@@ -36,13 +36,18 @@
                     <span class="text-xs text-green-700">[{{ log.meal_type | upper }}]</span>
                     {% endif %}
                 </div>
-                <div class="text-xs text-green-600 space-x-2">
-                    {% if log.calories %}<span>{{ log.calories }}cal</span>{% endif %}
-                    {% if log.protein_g %}<span>{{ log.protein_g }}P</span>{% endif %}
-                    {% if log.carbs_g %}<span>{{ log.carbs_g }}C</span>{% endif %}
-                    {% if log.fat_g %}<span>{{ log.fat_g }}F</span>{% endif %}
-                    {% if log.fiber_g %}<span>{{ log.fiber_g }}fib</span>{% endif %}
-                    {% if log.water_oz %}<span class="text-cyan-400">{{ log.water_oz }}oz</span>{% endif %}
+                <div class="flex items-center gap-3">
+                    <div class="text-xs text-green-600 space-x-2">
+                        {% if log.calories %}<span>{{ log.calories }}cal</span>{% endif %}
+                        {% if log.protein_g %}<span>{{ log.protein_g }}P</span>{% endif %}
+                        {% if log.carbs_g %}<span>{{ log.carbs_g }}C</span>{% endif %}
+                        {% if log.fat_g %}<span>{{ log.fat_g }}F</span>{% endif %}
+                        {% if log.fiber_g %}<span>{{ log.fiber_g }}fib</span>{% endif %}
+                        {% if log.water_oz %}<span class="text-cyan-400">{{ log.water_oz }}oz</span>{% endif %}
+                    </div>
+                    <button onclick="deleteEntry({{ log.id }}, '{{ log.description | e }}')"
+                            class="text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2"
+                            title="Delete entry">X</button>
                 </div>
             </div>
             {% endfor %}
@@ -71,4 +76,29 @@
     <a href="/" class="terminal-btn inline-block mt-4 px-4 py-2">> GO TO DASHBOARD</a>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deleteEntry(id, description) {
+    if (!confirm(`Delete "${description}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/nutrition/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete entry');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete entry');
+    }
+}
+</script>
 {% endblock %}
