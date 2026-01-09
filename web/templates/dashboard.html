@@ -54,7 +54,10 @@
         <h3 class="text-xs text-green-700 mb-1">FASTING</h3>
         <div class="text-xl font-bold terminal-text" id="fasting-display">--:--</div>
         <div class="text-xs text-green-700" id="fasting-status">NOT SET</div>
-        <button onclick="openFastingModal()" class="terminal-btn text-xs px-2 py-1 mt-2 w-full">SET</button>
+        <div class="flex gap-1 mt-2" id="fasting-buttons">
+            <button onclick="openFastingModal()" class="terminal-btn text-xs px-2 py-1 flex-1" id="btn-start-fast">START</button>
+            <button onclick="endFasting()" class="terminal-btn text-xs px-2 py-1 flex-1 hidden" id="btn-end-fast">END</button>
+        </div>
     </div>
 </div>
 
@@ -291,6 +294,9 @@ searchInput?.addEventListener('input', () => { clearTimeout(searchTimeout); sear
 document.addEventListener('click', (e) => { if (!searchResults?.contains(e.target) && e.target !== searchInput && e.target !== searchBtn) searchResults?.classList.add('hidden'); });
 
 // Fasting Timer
+let activeFastId = null;
+let activeFastStart = null;
+
 function openFastingModal() {
     document.getElementById('fasting-modal').classList.remove('hidden');
     const now = new Date();
@@ -305,7 +311,7 @@ function setFastDuration(hours) {
     document.getElementById('fast-duration').value = hours;
 }
 
-function startFasting() {
+async function startFasting() {
     const timeStr = document.getElementById('last-meal-time').value;
     const duration = parseInt(document.getElementById('fast-duration').value);
     if (!timeStr || !duration) return;
@@ -319,25 +325,92 @@ function startFasting() {
         lastMeal.setDate(lastMeal.getDate() - 1);
     }
 
-    const fastEnd = new Date(lastMeal.getTime() + duration * 60 * 60 * 1000);
+    // Save to API
+    try {
+        const response = await fetch('/api/fasting/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                started_at: lastMeal.toISOString(),
+                fasting_type: `${duration}:${24-duration}`
+            })
+        });
 
-    localStorage.setItem('fastingEnd', fastEnd.toISOString());
-    localStorage.setItem('fastingDuration', duration);
-    closeFastingModal();
-    updateFastingDisplay();
+        if (response.ok) {
+            const data = await response.json();
+            activeFastId = data.id;
+            activeFastStart = new Date(lastMeal);
+
+            // Also store locally for timer display
+            const fastEnd = new Date(lastMeal.getTime() + duration * 60 * 60 * 1000);
+            localStorage.setItem('fastingEnd', fastEnd.toISOString());
+            localStorage.setItem('fastingDuration', duration);
+            localStorage.setItem('fastingId', data.id);
+            localStorage.setItem('fastingStart', lastMeal.toISOString());
+
+            closeFastingModal();
+            updateFastingDisplay();
+        } else {
+            alert('Failed to start fast');
+        }
+    } catch (err) {
+        console.error('Error starting fast:', err);
+        alert('Failed to start fast');
+    }
+}
+
+async function endFasting() {
+    if (!confirm('End your current fast?')) return;
+
+    try {
+        const response = await fetch('/api/fasting/end', {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            clearFastingLocal();
+            location.reload();
+        } else {
+            alert('Failed to end fast');
+        }
+    } catch (err) {
+        console.error('Error ending fast:', err);
+        alert('Failed to end fast');
+    }
+}
+
+function clearFastingLocal() {
+    localStorage.removeItem('fastingEnd');
+    localStorage.removeItem('fastingDuration');
+    localStorage.removeItem('fastingId');
+    localStorage.removeItem('fastingStart');
+    activeFastId = null;
+    activeFastStart = null;
+    document.getElementById('fasting-display').textContent = '--:--';
+    document.getElementById('fasting-status').textContent = 'NOT SET';
+    document.getElementById('btn-start-fast').classList.remove('hidden');
+    document.getElementById('btn-end-fast').classList.add('hidden');
 }
 
 function clearFasting() {
-    localStorage.removeItem('fastingEnd');
-    localStorage.removeItem('fastingDuration');
-    document.getElementById('fasting-display').textContent = '--:--';
-    document.getElementById('fasting-status').textContent = 'NOT SET';
+    clearFastingLocal();
     closeFastingModal();
 }
 
 function updateFastingDisplay() {
     const fastEndStr = localStorage.getItem('fastingEnd');
-    if (!fastEndStr) return;
+    const btnStart = document.getElementById('btn-start-fast');
+    const btnEnd = document.getElementById('btn-end-fast');
+
+    if (!fastEndStr) {
+        btnStart.classList.remove('hidden');
+        btnEnd.classList.add('hidden');
+        return;
+    }
+
+    // Show end button, hide start button
+    btnStart.classList.add('hidden');
+    btnEnd.classList.remove('hidden');
 
     const fastEnd = new Date(fastEndStr);
     const now = new Date();
@@ -361,8 +434,34 @@ function updateFastingDisplay() {
     }
 }
 
-// Update fasting timer every minute
-updateFastingDisplay();
+// Check for active fast on page load
+async function checkActiveFast() {
+    try {
+        const response = await fetch('/api/fasting/active');
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.id) {
+                activeFastId = data.id;
+                activeFastStart = new Date(data.started_at);
+
+                // Calculate end time based on fasting type (e.g., "16:8")
+                const duration = parseInt(data.fasting_type?.split(':')[0] || 16);
+                const fastEnd = new Date(activeFastStart.getTime() + duration * 60 * 60 * 1000);
+
+                localStorage.setItem('fastingEnd', fastEnd.toISOString());
+                localStorage.setItem('fastingDuration', duration);
+                localStorage.setItem('fastingId', data.id);
+                localStorage.setItem('fastingStart', data.started_at);
+            }
+        }
+    } catch (err) {
+        console.error('Error checking active fast:', err);
+    }
+    updateFastingDisplay();
+}
+
+// Initialize fasting on page load
+checkActiveFast();
 setInterval(updateFastingDisplay, 60000);
 </script>
 {% endblock %}

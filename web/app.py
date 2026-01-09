@@ -205,6 +205,47 @@ def delete_fasting_log(fast_id: int):
         return jsonify({"error": "Failed to delete"}), response.status_code
 
 
+@app.route("/api/fasting/start", methods=["POST"])
+def start_fasting():
+    """Start a new fasting window"""
+    data = request.get_json()
+    with httpx.Client() as client:
+        response = client.post(
+            f"{API_URL}/api/fasting/",
+            json=data,
+            params={"discord_id": DEFAULT_DISCORD_ID}
+        )
+        if response.status_code == 200:
+            return jsonify(response.json())
+        return jsonify({"error": "Failed to start fast"}), response.status_code
+
+
+@app.route("/api/fasting/end", methods=["POST"])
+def end_fasting():
+    """End the active fasting window"""
+    with httpx.Client() as client:
+        response = client.post(
+            f"{API_URL}/api/fasting/end",
+            params={"discord_id": DEFAULT_DISCORD_ID}
+        )
+        if response.status_code == 200:
+            return jsonify(response.json())
+        return jsonify({"error": "Failed to end fast"}), response.status_code
+
+
+@app.route("/api/fasting/active")
+def get_active_fasting():
+    """Get the currently active fasting window"""
+    with httpx.Client() as client:
+        response = client.get(
+            f"{API_URL}/api/fasting/active",
+            params={"discord_id": DEFAULT_DISCORD_ID}
+        )
+        if response.status_code == 200:
+            return jsonify(response.json())
+        return jsonify(None)
+
+
 @app.route("/api/nutrition/usda/search")
 def usda_search():
     """Proxy USDA search requests to the API"""
