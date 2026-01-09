@@ -110,6 +110,7 @@ def manual_log():
     # Fetch history for log page
     days = request.args.get("days", 7, type=int)
     history = api_get(f"/nutrition/history?days={days}")
+    fasting_history = api_get(f"/fasting/history?days={days}")
 
     # Convert UTC timestamps to Eastern time and group by date
     history_by_date = defaultdict(list)
@@ -120,7 +121,22 @@ def manual_log():
         log_date = log.get("logged_at", "")[:10]
         history_by_date[log_date].append(log)
 
-    return render_template("log.html", history_by_date=dict(history_by_date), days=days)
+    # Convert fasting timestamps to Eastern time and group by date
+    fasting_by_date = defaultdict(list)
+    for fast in fasting_history:
+        if fast.get("started_at"):
+            fast["started_at"] = convert_utc_to_eastern(fast["started_at"])
+        if fast.get("ended_at"):
+            fast["ended_at"] = convert_utc_to_eastern(fast["ended_at"])
+        fast_date = fast.get("started_at", "")[:10]
+        fasting_by_date[fast_date].append(fast)
+
+    return render_template(
+        "log.html",
+        history_by_date=dict(history_by_date),
+        fasting_by_date=dict(fasting_by_date),
+        days=days
+    )
 
 
 @app.route("/trends")
@@ -169,6 +185,19 @@ def delete_nutrition_log(log_id: int):
     with httpx.Client() as client:
         response = client.delete(
             f"{API_URL}/api/nutrition/{log_id}",
+            params={"discord_id": DEFAULT_DISCORD_ID}
+        )
+        if response.status_code == 200:
+            return jsonify(response.json())
+        return jsonify({"error": "Failed to delete"}), response.status_code
+
+
+@app.route("/api/fasting/<int:fast_id>", methods=["DELETE"])
+def delete_fasting_log(fast_id: int):
+    """Delete a fasting window entry"""
+    with httpx.Client() as client:
+        response = client.delete(
+            f"{API_URL}/api/fasting/{fast_id}",
             params={"discord_id": DEFAULT_DISCORD_ID}
         )
         if response.status_code == 200:

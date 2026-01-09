@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine
 from .models import Base
-from .routers import nutrition, weight, workouts, metrics, dashboard
+from .routers import nutrition, weight, workouts, metrics, dashboard, fasting
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -29,6 +29,7 @@ app.include_router(weight.router, prefix="/api")
 app.include_router(workouts.router, prefix="/api")
 app.include_router(metrics.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(fasting.router, prefix="/api")
 
 
 @app.get("/")

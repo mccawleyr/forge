@@ -8,7 +8,7 @@
 </div>
 
 <!-- Progress Cards -->
-<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-6">
     <!-- Calories -->
     <div class="terminal-box p-3">
         <h3 class="text-xs text-green-700 mb-1">CALORIES</h3>
@@ -59,7 +59,7 @@
 </div>
 
 <!-- Stats Row -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-6">
     {% if today.weight %}
     <div class="terminal-box p-3 text-center">
         <div class="text-lg font-bold terminal-text">{{ today.weight }}</div>
@@ -68,13 +68,13 @@
     {% endif %}
 
     <div class="terminal-box p-3 text-center">
-        <div class="text-lg font-bold terminal-text">{{ today.carbs_g | round(0) }}g</div>
-        <div class="text-xs text-green-700">CARBS</div>
+        <div class="text-lg font-bold terminal-text {% if today.carbs_g > (goals.daily_carb_goal or 200) %}text-red-400{% endif %}">{{ today.carbs_g | round(0) }}g</div>
+        <div class="text-xs text-green-700">CARBS / {{ goals.daily_carb_goal or 200 }}g</div>
     </div>
 
     <div class="terminal-box p-3 text-center">
-        <div class="text-lg font-bold terminal-text">{{ today.fat_g | round(0) }}g</div>
-        <div class="text-xs text-green-700">FAT</div>
+        <div class="text-lg font-bold terminal-text {% if today.fat_g > (goals.daily_fat_goal or 65) %}text-red-400{% endif %}">{{ today.fat_g | round(0) }}g</div>
+        <div class="text-xs text-green-700">FAT / {{ goals.daily_fat_goal or 65 }}g</div>
     </div>
 
     {% if today.workout_minutes %}
@@ -172,26 +172,26 @@
 <!-- Week Summary -->
 <div class="terminal-box p-4">
     <h3 class="text-sm mb-4 text-green-700">> THIS_WEEK</h3>
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+    <div class="overflow-x-auto -mx-4 px-4">
+        <table class="w-full text-xs sm:text-sm min-w-0">
             <thead>
                 <tr class="text-green-700 border-b border-green-900">
                     <th class="text-left py-2">DATE</th>
                     <th class="text-right py-2">CAL</th>
                     <th class="text-right py-2">PROT</th>
-                    <th class="text-right py-2">FIBER</th>
-                    <th class="text-right py-2">WATER</th>
+                    <th class="text-right py-2 hidden sm:table-cell">FIBER</th>
+                    <th class="text-right py-2 hidden sm:table-cell">WATER</th>
                     <th class="text-right py-2">WT</th>
                 </tr>
             </thead>
             <tbody>
                 {% for day in week %}
                 <tr class="border-b border-green-900/50">
-                    <td class="py-2">{{ day.date }}</td>
+                    <td class="py-2 whitespace-nowrap">{{ day.date }}</td>
                     <td class="text-right py-2 {% if day.calorie_pct > 100 %}text-red-400{% endif %}">{{ day.calories }}</td>
                     <td class="text-right py-2">{{ day.protein_g | round(0) }}g</td>
-                    <td class="text-right py-2">{{ day.fiber_g | round(0) }}g</td>
-                    <td class="text-right py-2">{{ day.water_oz | round(0) }}oz</td>
+                    <td class="text-right py-2 hidden sm:table-cell">{{ day.fiber_g | round(0) }}g</td>
+                    <td class="text-right py-2 hidden sm:table-cell">{{ day.water_oz | round(0) }}oz</td>
                     <td class="text-right py-2">{% if day.weight %}{{ day.weight }}{% else %}-{% endif %}</td>
                 </tr>
                 {% endfor %}

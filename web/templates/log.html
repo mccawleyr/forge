@@ -2,22 +2,54 @@
 {% block title %}HISTORY // FORGE{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold terminal-text">> LOG_HISTORY</h1>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+    <h1 class="text-xl sm:text-2xl font-bold terminal-text">> LOG_HISTORY</h1>
     <div class="flex gap-2">
-        <a href="?days=7" class="terminal-btn px-3 py-1 text-sm {% if days == 7 %}bg-green-900{% endif %}">7D</a>
-        <a href="?days=14" class="terminal-btn px-3 py-1 text-sm {% if days == 14 %}bg-green-900{% endif %}">14D</a>
-        <a href="?days=30" class="terminal-btn px-3 py-1 text-sm {% if days == 30 %}bg-green-900{% endif %}">30D</a>
+        <a href="?days=7" class="terminal-btn px-2 sm:px-3 py-1 text-xs sm:text-sm {% if days == 7 %}bg-green-900{% endif %}">7D</a>
+        <a href="?days=14" class="terminal-btn px-2 sm:px-3 py-1 text-xs sm:text-sm {% if days == 14 %}bg-green-900{% endif %}">14D</a>
+        <a href="?days=30" class="terminal-btn px-2 sm:px-3 py-1 text-xs sm:text-sm {% if days == 30 %}bg-green-900{% endif %}">30D</a>
     </div>
 </div>
 
-{% if history_by_date %}
+{% set all_dates = (history_by_date.keys() | list + fasting_by_date.keys() | list) | unique | sort(reverse=true) %}
+{% if all_dates | list | length > 0 %}
 <div class="space-y-4">
-    {% for log_date, logs in history_by_date | dictsort(reverse=true) %}
+    {% for log_date in all_dates %}
     <div class="terminal-box p-4">
         <h3 class="text-sm text-green-700 mb-3 border-b border-green-900 pb-2">> {{ log_date }}</h3>
 
+        <!-- Fasting entries for this day -->
+        {% if fasting_by_date.get(log_date) %}
+        <div class="mb-3 pb-3 border-b border-green-900/50">
+            {% for fast in fasting_by_date.get(log_date, []) %}
+            <div class="flex justify-between items-center py-1 text-sm group">
+                <div class="flex items-center gap-3">
+                    <span class="text-green-700 text-xs">{{ fast.started_at[11:16] if fast.started_at else '' }}</span>
+                    <span class="text-yellow-500">[FAST]</span>
+                    <span class="terminal-text">
+                        {{ fast.fasting_type or '16:8' }}
+                        {% if fast.ended_at %}
+                        - ended {{ fast.ended_at[11:16] }}
+                        {% else %}
+                        - <span class="text-yellow-400 blink">ACTIVE</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if fast.duration_hours %}
+                    <span class="text-xs text-yellow-500">{{ fast.duration_hours }}h</span>
+                    {% endif %}
+                    <button onclick="deleteFasting({{ fast.id }})"
+                            class="text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2"
+                            title="Delete fasting entry">X</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% set day_totals = namespace(cal=0, prot=0, carbs=0, fat=0, fiber=0, water=0) %}
+        {% set logs = history_by_date.get(log_date, []) %}
 
         <div class="space-y-2">
             {% for log in logs %}
@@ -28,25 +60,25 @@
             {% set day_totals.fiber = day_totals.fiber + (log.fiber_g or 0) %}
             {% set day_totals.water = day_totals.water + (log.water_oz or 0) %}
 
-            <div class="flex justify-between items-center py-1 border-b border-green-900/30 text-sm group">
-                <div class="flex items-center gap-3">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-green-900/30 text-xs sm:text-sm group gap-1">
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                     <span class="text-green-700 text-xs">{{ log.logged_at[11:16] if log.logged_at else '' }}</span>
-                    <span class="terminal-text">{{ log.description }}</span>
+                    <span class="terminal-text break-words">{{ log.description }}</span>
                     {% if log.meal_type %}
                     <span class="text-xs text-green-700">[{{ log.meal_type | upper }}]</span>
                     {% endif %}
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="text-xs text-green-600 space-x-2">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="text-xs text-green-600 space-x-1 sm:space-x-2 flex flex-wrap">
                         {% if log.calories %}<span>{{ log.calories }}cal</span>{% endif %}
                         {% if log.protein_g %}<span>{{ log.protein_g }}P</span>{% endif %}
-                        {% if log.carbs_g %}<span>{{ log.carbs_g }}C</span>{% endif %}
-                        {% if log.fat_g %}<span>{{ log.fat_g }}F</span>{% endif %}
-                        {% if log.fiber_g %}<span>{{ log.fiber_g }}fib</span>{% endif %}
+                        {% if log.carbs_g %}<span class="hidden sm:inline">{{ log.carbs_g }}C</span>{% endif %}
+                        {% if log.fat_g %}<span class="hidden sm:inline">{{ log.fat_g }}F</span>{% endif %}
+                        {% if log.fiber_g %}<span class="hidden sm:inline">{{ log.fiber_g }}fib</span>{% endif %}
                         {% if log.water_oz %}<span class="text-cyan-400">{{ log.water_oz }}oz</span>{% endif %}
                     </div>
                     <button onclick="deleteEntry({{ log.id }}, '{{ log.description | e }}')"
-                            class="text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2"
+                            class="text-red-500 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-xs px-1 sm:px-2"
                             title="Delete entry">X</button>
                 </div>
             </div>
@@ -54,19 +86,21 @@
         </div>
 
         <!-- Day Totals -->
-        <div class="mt-3 pt-3 border-t border-green-700 flex justify-between text-sm">
+        {% if logs %}
+        <div class="mt-3 pt-3 border-t border-green-700 flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm gap-1">
             <span class="text-green-700">TOTAL:</span>
-            <div class="text-green-400 space-x-3">
+            <div class="text-green-400 space-x-2 sm:space-x-3 flex flex-wrap">
                 <span>{{ day_totals.cal | round(0) | int }}cal</span>
                 <span>{{ day_totals.prot | round(0) | int }}P</span>
                 <span>{{ day_totals.carbs | round(0) | int }}C</span>
                 <span>{{ day_totals.fat | round(0) | int }}F</span>
-                <span>{{ day_totals.fiber | round(0) | int }}fib</span>
+                <span class="hidden sm:inline">{{ day_totals.fiber | round(0) | int }}fib</span>
                 {% if day_totals.water > 0 %}
                 <span class="text-cyan-400">{{ day_totals.water | round(0) | int }}oz</span>
                 {% endif %}
             </div>
         </div>
+        {% endif %}
     </div>
     {% endfor %}
 </div>
@@ -98,6 +132,27 @@ async function deleteEntry(id, description) {
     } catch (error) {
         console.error('Delete error:', error);
         alert('Failed to delete entry');
+    }
+}
+
+async function deleteFasting(id) {
+    if (!confirm('Delete this fasting entry?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/fasting/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete fasting entry');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete fasting entry');
     }
 }
 </script>

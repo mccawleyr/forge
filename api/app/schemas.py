@@ -99,6 +99,26 @@ class WorkoutResponse(BaseModel):
         from_attributes = True
 
 
+# --- Fasting ---
+class FastingCreate(BaseModel):
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    fasting_type: Optional[str] = "16:8"
+    notes: Optional[str] = None
+
+
+class FastingResponse(BaseModel):
+    id: int
+    started_at: datetime
+    ended_at: Optional[datetime]
+    fasting_type: Optional[str]
+    notes: Optional[str]
+    duration_hours: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
 # --- Daily Metrics ---
 class DailyMetricCreate(BaseModel):
     date: Optional[date] = None
