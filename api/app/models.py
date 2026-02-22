@@ -50,6 +50,11 @@ class User(Base):
     fasting_windows = relationship("FastingWindow", back_populates="user")
     workouts = relationship("Workout", back_populates="user")
     daily_metrics = relationship("DailyMetric", back_populates="user")
+    conversations = relationship("Conversation", back_populates="user")
+    recipes = relationship("Recipe", back_populates="user")
+    meal_plans = relationship("MealPlan", back_populates="user")
+    grocery_lists = relationship("GroceryList", back_populates="user")
+    reminders = relationship("Reminder", back_populates="user")
 
 
 class WeightLog(Base):
@@ -142,3 +147,95 @@ class DailyMetric(Base):
     notes = Column(Text)
 
     user = relationship("User", back_populates="daily_metrics")
+
+
+# --- Conversational AI Models ---
+
+class Conversation(Base):
+    """Tracks conversation sessions with users"""
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    last_message_at = Column(DateTime, default=datetime.utcnow)
+    context = Column(Text)  # JSON: current topic, intent history
+
+    messages = relationship("Message", back_populates="conversation")
+    user = relationship("User", back_populates="conversations")
+
+
+class Message(Base):
+    """Individual messages in a conversation"""
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
+    direction = Column(String(10))  # 'inbound' or 'outbound'
+    content = Column(Text)
+    ai_intent = Column(String(50))  # parsed intent
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    conversation = relationship("Conversation", back_populates="messages")
+
+
+class Recipe(Base):
+    """User recipes with macros"""
+    __tablename__ = "recipes"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    ingredients = Column(Text)  # JSON array
+    instructions = Column(Text)
+    servings = Column(Integer, default=1)
+    calories_per_serving = Column(Integer)
+    protein_g = Column(Numeric(5, 1))
+    carbs_g = Column(Numeric(5, 1))
+    fat_g = Column(Numeric(5, 1))
+    source = Column(String(50))  # 'ai', 'user', 'url'
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="recipes")
+
+
+class MealPlan(Base):
+    """Weekly meal plans"""
+    __tablename__ = "meal_plans"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    week_start = Column(Date, nullable=False)
+    plan_data = Column(Text)  # JSON: {mon: {breakfast, lunch, dinner}, ...}
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="meal_plans")
+
+
+class GroceryList(Base):
+    """Shopping lists"""
+    __tablename__ = "grocery_lists"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(100))
+    items = Column(Text)  # JSON array: [{name, quantity, checked}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
+
+    user = relationship("User", back_populates="grocery_lists")
+
+
+class Reminder(Base):
+    """Scheduled reminder configurations"""
+    __tablename__ = "reminders"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reminder_type = Column(String(30))  # water, log_meal, check_in, custom
+    schedule = Column(String(50))  # cron: "0 8 * * *" or interval: "every 2h"
+    message_template = Column(Text)
+    enabled = Column(Boolean, default=True)
+    last_sent_at = Column(DateTime)
+
+    user = relationship("User", back_populates="reminders")

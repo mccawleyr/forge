@@ -172,3 +172,138 @@ class UserGoals(BaseModel):
     daily_carb_goal: int = 200
     daily_fat_goal: int = 65
     daily_water_goal: int = 64
+
+
+# --- Conversation ---
+class ChatRequest(BaseModel):
+    discord_id: str
+    message: str
+    image_base64: Optional[str] = None  # For food photo analysis
+
+
+class ChatResponse(BaseModel):
+    response: str
+    intent: str
+    suggestions: Optional[list[str]] = None
+    recipe: Optional[dict] = None
+    meal_plan: Optional[dict] = None
+    parsed_nutrition: Optional[ParsedNutrition] = None
+
+
+class MessageResponse(BaseModel):
+    id: int
+    direction: str
+    content: str
+    ai_intent: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConversationResponse(BaseModel):
+    id: int
+    started_at: datetime
+    last_message_at: datetime
+    messages: list[MessageResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+# --- Recipe ---
+class RecipeCreate(BaseModel):
+    name: str
+    ingredients: list[str]
+    instructions: str
+    servings: int = 1
+    calories_per_serving: Optional[int] = None
+    protein_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fat_g: Optional[float] = None
+    source: str = "user"
+
+
+class RecipeResponse(BaseModel):
+    id: int
+    name: str
+    ingredients: list[str]
+    instructions: str
+    servings: int
+    calories_per_serving: Optional[int]
+    protein_g: Optional[float]
+    carbs_g: Optional[float]
+    fat_g: Optional[float]
+    source: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Meal Plan ---
+class MealPlanDay(BaseModel):
+    breakfast: Optional[str] = None
+    lunch: Optional[str] = None
+    dinner: Optional[str] = None
+    snacks: Optional[list[str]] = None
+
+
+class MealPlanResponse(BaseModel):
+    id: int
+    week_start: date
+    plan_data: dict[str, MealPlanDay]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Grocery List ---
+class GroceryItem(BaseModel):
+    name: str
+    quantity: Optional[str] = None
+    checked: bool = False
+
+
+class GroceryListCreate(BaseModel):
+    name: str
+    items: list[GroceryItem]
+
+
+class GroceryListResponse(BaseModel):
+    id: int
+    name: str
+    items: list[GroceryItem]
+    created_at: datetime
+    completed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# --- Reminders ---
+class ReminderCreate(BaseModel):
+    reminder_type: str  # water, log_meal, check_in, custom
+    schedule: str  # cron format or "every Xh"
+    message_template: str
+    enabled: bool = True
+
+
+class ReminderResponse(BaseModel):
+    id: int
+    reminder_type: str
+    schedule: str
+    message_template: str
+    enabled: bool
+    last_sent_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class ReminderTrigger(BaseModel):
+    """Used by scheduler to trigger a reminder"""
+    reminder_id: int
+    discord_id: str
+    message: str

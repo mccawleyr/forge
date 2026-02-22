@@ -1,0 +1,72 @@
+services:
+  forge-db:
+    image: postgres:15-alpine
+    container_name: forge-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
+      POSTGRES_DB: ${POSTGRES_DB:-forge}
+    volumes:
+      - forge_db_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  forge-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: forge-api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@forge-db:5432/${POSTGRES_DB:-forge}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      USDA_API_KEY: ${USDA_API_KEY}
+      BOT_NOTIFICATION_URL: http://forge-bot:8080
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      forge-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  forge-bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: forge-bot
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      API_URL: http://forge-api:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - forge-api
+    restart: unless-stopped
+
+  forge-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: forge-web
+    environment:
+      API_URL: http://forge-api:8000
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-}
+      DEFAULT_DISCORD_ID: ${DEFAULT_DISCORD_ID:-default_user}
+      AUTHENTIK_URL: ${AUTHENTIK_URL:-https://authentik.mccawley.me}
+      AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:-}
+      AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:-}
+      FORGE_URL: ${FORGE_URL:-https://forge.mccawley.me}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - forge-api
+    restart: unless-stopped
+
+volumes:
+  forge_db_data:

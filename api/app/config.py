@@ -9,11 +9,17 @@ class Settings(BaseSettings):
     # Claude API
     anthropic_api_key: str = ""
 
+    # OpenAI (fallback)
+    openai_api_key: str = ""
+
     # USDA FoodData Central
     usda_api_key: str = ""
 
     # App settings
     debug: bool = False
+
+    # Bot notification URL (for reminders)
+    bot_notification_url: str = "http://forge-bot:8080"
 
     class Config:
         env_file = ".env"

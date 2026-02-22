@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}CHAT // FORGE{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-[calc(100vh-8rem)]">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold terminal-text">> FORGE_ASSISTANT</h1>
+            <p class="text-green-700 text-xs">// Natural language health tracking</p>
+        </div>
+        <button onclick="clearChat()" class="terminal-btn text-xs px-3 py-1">[CLEAR]</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto terminal-box p-4 space-y-4 mb-4">
+        <!-- Welcome message -->
+        <div class="chat-message assistant">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded terminal-box flex items-center justify-center text-xs font-bold text-green-400 shrink-0">F</div>
+                <div class="flex-1">
+                    <div class="text-xs text-green-700 mb-1">FORGE</div>
+                    <div class="chat-bubble assistant-bubble">
+                        <p>Hey! I'm your health tracking assistant. You can:</p>
+                        <ul class="list-disc list-inside mt-2 text-sm space-y-1">
+                            <li><span class="text-green-400">"I had eggs and toast for breakfast"</span> - log meals</li>
+                            <li><span class="text-green-400">"Drank 16oz water"</span> - log water</li>
+                            <li><span class="text-green-400">"How am I doing today?"</span> - check progress</li>
+                            <li><span class="text-green-400">"Give me a high protein dinner recipe"</span> - get recipes</li>
+                            <li><span class="text-green-400">"Plan my meals for the week"</span> - meal planning</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History will be loaded here -->
+        <div id="history-messages"></div>
+
+        <!-- Typing indicator (hidden by default) -->
+        <div id="typing-indicator" class="chat-message assistant hidden">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded terminal-box flex items-center justify-center text-xs font-bold text-green-400 shrink-0">F</div>
+                <div class="flex-1">
+                    <div class="text-xs text-green-700 mb-1">FORGE</div>
+                    <div class="chat-bubble assistant-bubble">
+                        <span class="typing-dots">
+                            <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="terminal-box p-4">
+        <form id="chat-form" class="flex gap-3">
+            <input
+                type="text"
+                id="chat-input"
+                placeholder="Type a message..."
+                class="terminal-input flex-1 px-4 py-3 text-sm"
+                autocomplete="off"
+            >
+            <button type="submit" id="chat-send" class="terminal-btn px-6 py-3 text-sm font-bold">
+                [SEND]
+            </button>
+        </form>
+        <div class="flex gap-4 mt-3 text-xs text-green-700">
+            <button type="button" onclick="quickAction('How am I doing today?')" class="hover:text-green-400">> status</button>
+            <button type="button" onclick="quickAction('What should I eat?')" class="hover:text-green-400">> suggest meal</button>
+            <button type="button" onclick="quickAction('Give me a recipe')" class="hover:text-green-400">> recipe</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-bubble {
+        max-width: 80%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        line-height: 1.5;
+    }
+
+    .assistant-bubble {
+        background-color: var(--terminal-bg);
+        border: 1px solid var(--terminal-green-dark);
+        color: var(--terminal-green);
+    }
+
+    .user-bubble {
+        background-color: var(--terminal-green-dark);
+        border: 1px solid var(--terminal-green);
+        color: var(--terminal-green);
+        margin-left: auto;
+    }
+
+    .chat-message.user {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .chat-message.user .flex {
+        flex-direction: row-reverse;
+    }
+
+    .typing-dots .dot {
+        animation: typingDot 1.4s infinite;
+        opacity: 0.3;
+    }
+
+    .typing-dots .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-dots .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typingDot {
+        0%, 60%, 100% { opacity: 0.3; }
+        30% { opacity: 1; }
+    }
+
+    /* Custom scrollbar for chat */
+    #chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #chat-messages::-webkit-scrollbar-track {
+        background: var(--terminal-bg);
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb {
+        background: var(--terminal-green-dark);
+        border-radius: 3px;
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb:hover {
+        background: var(--terminal-green-dim);
+    }
+</style>
+
+<script>
+const messagesContainer = document.getElementById('chat-messages');
+const historyContainer = document.getElementById('history-messages');
+const typingIndicator = document.getElementById('typing-indicator');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('chat-send');
+
+// Load conversation history on page load
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/conversation/history?limit=50');
+        const data = await response.json();
+
+        if (data.messages && data.messages.length > 0) {
+            historyContainer.innerHTML = data.messages.map(msg => createMessageHTML(
+                msg.content,
+                msg.direction === 'inbound'
+            )).join('');
+            scrollToBottom();
+        }
+    } catch (err) {
+        console.error('Failed to load history:', err);
+    }
+}
+
+function createMessageHTML(content, isUser) {
+    const formattedContent = formatMessage(content);
+
+    if (isUser) {
+        return `
+            <div class="chat-message user">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded terminal-box flex items-center justify-center text-xs font-bold text-green-300 shrink-0">U</div>
+                    <div class="flex-1 flex justify-end">
+                        <div class="chat-bubble user-bubble">${formattedContent}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="chat-message assistant">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded terminal-box flex items-center justify-center text-xs font-bold text-green-400 shrink-0">F</div>
+                    <div class="flex-1">
+                        <div class="text-xs text-green-700 mb-1">FORGE</div>
+                        <div class="chat-bubble assistant-bubble">${formattedContent}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function formatMessage(content) {
+    // Convert markdown-style formatting
+    return content
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-green-300">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code class="bg-green-900/50 px-1 rounded">$1</code>')
+        .replace(/\n/g, '<br>');
+}
+
+function addMessage(content, isUser) {
+    const messageHTML = createMessageHTML(content, isUser);
+
+    // Insert before typing indicator
+    typingIndicator.insertAdjacentHTML('beforebegin', messageHTML);
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showTyping() {
+    typingIndicator.classList.remove('hidden');
+    scrollToBottom();
+}
+
+function hideTyping() {
+    typingIndicator.classList.add('hidden');
+}
+
+function quickAction(message) {
+    chatInput.value = message;
+    chatForm.dispatchEvent(new Event('submit'));
+}
+
+function clearChat() {
+    historyContainer.innerHTML = '';
+    // Keep the welcome message, remove everything else except typing indicator
+    const messages = messagesContainer.querySelectorAll('.chat-message:not(#typing-indicator):not(:first-child)');
+    messages.forEach(msg => {
+        if (!msg.closest('#history-messages')) {
+            msg.remove();
+        }
+    });
+}
+
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    // Add user message
+    addMessage(message, true);
+    chatInput.value = '';
+
+    // Disable input
+    chatInput.disabled = true;
+    sendBtn.disabled = true;
+    sendBtn.textContent = '[...]';
+
+    // Show typing indicator
+    showTyping();
+
+    try {
+        const response = await fetch('/api/conversation/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+
+        const data = await response.json();
+
+        hideTyping();
+
+        if (data.response) {
+            addMessage(data.response, false);
+
+            // If a meal was logged, show a subtle notification
+            if (data.intent === 'log_meal' || data.intent === 'log_water') {
+                // Optional: could add a toast notification here
+            }
+        } else if (data.error) {
+            addMessage(`Error: ${data.error}`, false);
+        }
+    } catch (err) {
+        hideTyping();
+        addMessage('Failed to connect to Forge. Please try again.', false);
+        console.error('Chat error:', err);
+    }
+
+    // Re-enable input
+    chatInput.disabled = false;
+    sendBtn.disabled = false;
+    sendBtn.textContent = '[SEND]';
+    chatInput.focus();
+});
+
+// Allow Enter to send
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
+    }
+});
+
+// Load history on page load
+loadHistory();
+
+// Focus input on page load
+chatInput.focus();
+</script>
+{% endblock %}

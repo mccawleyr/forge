@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}FORGE - Recipes{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="terminal-box p-4">
+        <h1 class="text-2xl font-bold terminal-text">> RECIPES_</h1>
+        <p class="text-green-700 text-sm mt-1">Your saved recipes from Discord conversations</p>
+    </div>
+
+    <!-- Recipe Cards -->
+    {% if recipes %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for recipe in recipes %}
+        <div class="terminal-box p-4 recipe-card" data-recipe-id="{{ recipe.id }}">
+            <div class="flex justify-between items-start mb-3">
+                <h2 class="text-lg font-bold terminal-text">{{ recipe.name }}</h2>
+                <button onclick="deleteRecipe({{ recipe.id }})" class="text-red-500 hover:text-red-400 text-sm px-2 py-1 border border-red-800 hover:border-red-500 transition-colors">
+                    [DEL]
+                </button>
+            </div>
+
+            <!-- Macros -->
+            <div class="grid grid-cols-2 gap-2 text-sm mb-4">
+                <div class="flex justify-between">
+                    <span class="text-green-700">Calories:</span>
+                    <span>{{ recipe.calories_per_serving or '-' }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-green-700">Protein:</span>
+                    <span>{{ recipe.protein_g or '-' }}g</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-green-700">Carbs:</span>
+                    <span>{{ recipe.carbs_g or '-' }}g</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-green-700">Fat:</span>
+                    <span>{{ recipe.fat_g or '-' }}g</span>
+                </div>
+            </div>
+
+            <!-- Servings -->
+            {% if recipe.servings %}
+            <div class="text-xs text-green-700 mb-3">
+                Servings: {{ recipe.servings }}
+            </div>
+            {% endif %}
+
+            <!-- Ingredients (collapsible) -->
+            {% if recipe.ingredients %}
+            <details class="mb-3">
+                <summary class="cursor-pointer text-green-600 hover:text-green-400 text-sm">
+                    > Ingredients ({{ recipe.ingredients|length }})
+                </summary>
+                <ul class="mt-2 text-sm space-y-1 pl-4 border-l border-green-900">
+                    {% for ingredient in recipe.ingredients %}
+                    <li class="text-green-300">- {{ ingredient }}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+
+            <!-- Instructions (collapsible) -->
+            {% if recipe.instructions %}
+            <details class="mb-3">
+                <summary class="cursor-pointer text-green-600 hover:text-green-400 text-sm">
+                    > Instructions
+                </summary>
+                <div class="mt-2 text-sm text-green-300 pl-4 border-l border-green-900 whitespace-pre-wrap">{{ recipe.instructions }}</div>
+            </details>
+            {% endif %}
+
+            <!-- Source & Date -->
+            <div class="flex justify-between text-xs text-green-800 mt-4 pt-2 border-t border-green-900">
+                <span>Source: {{ recipe.source or 'ai' }}</span>
+                <span>{{ recipe.created_at[:10] if recipe.created_at else '' }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="terminal-box p-8 text-center">
+        <p class="text-green-700 text-lg mb-4">No recipes saved yet.</p>
+        <p class="text-green-600 text-sm">Ask the Forge Discord bot for a recipe to get started!</p>
+        <p class="text-green-800 text-xs mt-4">Example: "Give me a high protein chicken dinner recipe"</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deleteRecipe(recipeId) {
+    if (!confirm('Delete this recipe?')) return;
+
+    try {
+        const response = await fetch(`/api/recipes/${recipeId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            // Remove the card from DOM
+            const card = document.querySelector(`[data-recipe-id="${recipeId}"]`);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9)';
+                setTimeout(() => card.remove(), 200);
+            }
+        } else {
+            alert('Failed to delete recipe');
+        }
+    } catch (error) {
+        console.error('Error deleting recipe:', error);
+        alert('Error deleting recipe');
+    }
+}
+</script>
+<style>
+.recipe-card {
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+details summary::before {
+    content: '[+] ';
+}
+
+details[open] summary::before {
+    content: '[-] ';
+}
+</style>
+{% endblock %}
